@@ -18,7 +18,7 @@ export function MapPanel({ focusYear }: MapPanelProps) {
             Historical map for {formatYearLabel(focusYear)}
           </h2>
           <p className="mt-1 text-xs text-slate-400">
-            The dial directly beneath this panel will eventually scrub the map,
+            The timeline ruler at the bottom of the page controls this map,
             revealing borders, trade routes, and cultural shifts for each year.
           </p>
         </div>
@@ -39,7 +39,7 @@ export function MapPanel({ focusYear }: MapPanelProps) {
               trade signals pulse to highlight what changed.
             </p>
             <div className="rounded-2xl border border-slate-700/80 bg-slate-900/70 px-3 py-1 text-[11px] uppercase tracking-[0.25em] text-slate-300">
-              Controlled by the dial below
+              Controlled by the ruler at the bottom
             </div>
           </div>
         </div>

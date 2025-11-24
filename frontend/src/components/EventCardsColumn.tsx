@@ -153,8 +153,8 @@ export function EventCardsColumn({
           Era stacks around {formatYearLabel(focusYear)}
         </h2>
         <p className="text-xs text-slate-400">
-          Cards are grouped by the ruler&apos;s major ticks so you see what{" "}
-          came before, during, and after each anchor window.
+          Cards are grouped by the timeline ruler&apos;s major ticks so you see
+          what came before, during, and after each anchor window.
         </p>
       </header>
 

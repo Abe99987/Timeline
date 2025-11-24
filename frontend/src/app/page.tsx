@@ -44,32 +44,43 @@ export default function Home() {
           </div>
         </header>
 
-        <section className="grid items-start gap-6 lg:grid-cols-[minmax(0,3.2fr)_minmax(280px,1fr)]">
-          <div className="min-w-0">
-            <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
-              <MapPanel focusYear={focusYear} />
-              <TimelineBar
-                focusYear={focusYear}
-                onFocusYearChange={handleFocusYearChange}
-                minYear={MIN_YEAR}
-                maxYear={MAX_YEAR}
-                majorTickStep={ERA_STEP}
-              />
-            </div>
-          </div>
-          <div className="min-w-0 lg:mt-2">
+        {/* Filters tile - full-width at top */}
+        <section className="w-full">
+          <div className="mx-auto w-full max-w-5xl">
             <FiltersPanel />
           </div>
         </section>
 
-        <section className="mt-2">
+        {/* Map panel - big and centered */}
+        <section className="w-full">
+          <div className="mx-auto w-full max-w-5xl">
+            <MapPanel focusYear={focusYear} />
+          </div>
+        </section>
+
+        {/* Event cards - three stacks beneath map */}
+        <section className="w-full">
           <div className="mx-auto w-full max-w-5xl">
             <EventCardsColumn focusYear={focusYear} eraStep={ERA_STEP} />
           </div>
         </section>
 
-        <section className="mt-4">
-          <div className="mx-auto w-full max-w-4xl">
+        {/* Timeline ruler - beneath event stacks */}
+        <section className="w-full">
+          <div className="mx-auto w-full max-w-5xl">
+            <TimelineBar
+              focusYear={focusYear}
+              onFocusYearChange={handleFocusYearChange}
+              minYear={MIN_YEAR}
+              maxYear={MAX_YEAR}
+              majorTickStep={ERA_STEP}
+            />
+          </div>
+        </section>
+
+        {/* Chat box - at bottom */}
+        <section className="w-full">
+          <div className="mx-auto w-full max-w-5xl">
             <ChatBox />
           </div>
         </section>
