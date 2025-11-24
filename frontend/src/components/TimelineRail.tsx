@@ -183,23 +183,19 @@ function YearColumn({
   }, [eventsForYear, focusYear]);
 
   // Styling based on focus/neighbor status
-  const columnBaseHeight = isFocus ? "h-[400px]" : "h-[320px]";
-  const columnWidth = isFocus ? "w-32" : "w-24";
+  const columnHeight = isFocus ? "h-[360px]" : isNeighbor ? "h-[320px]" : "h-[300px]";
+  const columnWidth = isFocus ? "w-32" : isNeighbor ? "w-24" : "w-20";
   const columnScale = isFocus
-    ? "origin-bottom scale-[1.08]"
+    ? "origin-bottom scale-[1.07]"
     : isNeighbor
-      ? "origin-bottom scale-[0.98] opacity-90"
-      : "origin-bottom scale-[0.92] opacity-60";
+      ? "origin-bottom scale-[0.97] opacity-90"
+      : "origin-bottom scale-[0.92] opacity-70";
   const cardStackSizing = isFocus
-    ? "max-h-[300px] overflow-y-auto pr-2"
+    ? "max-h-[280px] overflow-y-auto pr-1"
     : isNeighbor
-      ? "max-h-[150px] overflow-hidden"
-      : "max-h-[120px] overflow-hidden";
-  const cardStackTone = isFocus
-    ? ""
-    : isNeighbor
-      ? "space-y-1.5"
-      : "space-y-1";
+      ? "max-h-[140px] overflow-hidden"
+      : "max-h-[110px] overflow-hidden";
+  const cardStackTone = isFocus ? "" : "space-y-1.5";
   const cardVariant = isFocus ? "focus" : isNeighbor ? "neighbor" : "distant";
   const eventsToRender = eventsForYear;
 
@@ -209,11 +205,11 @@ function YearColumn({
 
   return (
     <div
-      className={`relative z-10 flex shrink-0 flex-col items-center gap-2 transition-all duration-300 ${columnWidth} ${columnBaseHeight} ${columnScale}`}
+      className={`relative z-10 flex shrink-0 flex-col items-center justify-end transition-all duration-300 ${columnWidth} ${columnHeight} ${columnScale}`}
     >
       {/* Cards area */}
       <div
-        className={`flex w-full flex-1 flex-col space-y-2 pb-4 ${cardStackTone} ${cardStackSizing}`}
+        className={`flex w-full flex-col space-y-2 ${cardStackTone} ${cardStackSizing} mb-2`}
       >
         {eventsToRender.length > 0 ? (
           eventsToRender.map((event) => (
@@ -241,7 +237,7 @@ function YearColumn({
       {/* Tick */}
       <button
         type="button"
-        className="mt-auto flex flex-col items-center gap-1 pt-2 text-slate-500 transition-colors focus:outline-none focus-visible:text-sky-200"
+        className="flex flex-col items-center gap-1 pt-1 text-slate-500 transition-colors focus:outline-none focus-visible:text-sky-200"
         aria-label={`Set focus year to ${formatYearLabel(year)}`}
         aria-pressed={isActive}
         onClick={() => onYearSelect?.(year)}
