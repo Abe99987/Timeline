@@ -41,28 +41,68 @@ type YearColumnProps = {
   isFocus: boolean;
   isNeighbor: boolean;
   focusYear: number;
+  isFocusFallback?: boolean;
+  fallbackSourceYear?: number | null;
   onSelectEvent?: (event: TimelineEvent) => void;
+  onYearSelect?: (year: number) => void;
 };
+
+function findNearestEventsForYear(
+  focusYear: number,
+  years: number[],
+  buckets: Map<number, TimelineEvent[]>,
+): { year: number | null; events: TimelineEvent[] } {
+  const exactEvents = buckets.get(focusYear) ?? [];
+  if (exactEvents.length > 0) {
+    return { year: focusYear, events: exactEvents };
+  }
+
+  let closestYear: number | null = null;
+  let closestEvents: TimelineEvent[] = [];
+  let smallestDistance = Number.POSITIVE_INFINITY;
+
+  for (const year of years) {
+    const eventsForYear = buckets.get(year);
+    if (!eventsForYear || eventsForYear.length === 0) continue;
+    const distance = Math.abs(year - focusYear);
+    if (distance < smallestDistance) {
+      smallestDistance = distance;
+      closestYear = year;
+      closestEvents = eventsForYear;
+    }
+  }
+
+  return { year: closestYear, events: closestEvents };
+}
 
 function MiniEventCard({
   event,
   isPrimary,
   onClick,
+  variant = "neighbor",
 }: {
   event: TimelineEvent;
   isPrimary: boolean;
   onClick?: () => void;
+  variant?: "focus" | "neighbor" | "distant";
 }) {
   const baseClasses =
-    "flex flex-col gap-1.5 rounded-xl border bg-slate-950/90 transition-all duration-200 cursor-pointer hover:bg-slate-900/90";
+    "flex flex-col rounded-xl border transition-all duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60";
+
+  const variantClasses =
+    variant === "focus"
+      ? "gap-2.5 border-sky-600/80 bg-slate-950/95 p-4 shadow-lg shadow-sky-900/25 ring-1 ring-sky-500/30"
+      : variant === "neighbor"
+        ? "gap-2 border-slate-800/70 bg-slate-950/85 p-3 opacity-90 hover:opacity-100"
+        : "gap-1.5 border-slate-800/60 bg-slate-950/70 p-2 text-[11px] opacity-75 hover:opacity-95";
 
   const emphasisClasses = isPrimary
-    ? "border-sky-600/80 p-3 shadow-md shadow-sky-900/20 ring-1 ring-sky-500/30"
-    : "border-slate-800/70 p-2.5 opacity-90 hover:opacity-100";
+    ? "border-sky-500/80 ring-1 ring-sky-400/40 shadow-sky-900/30"
+    : "";
 
   return (
     <article
-      className={`${baseClasses} ${emphasisClasses}`}
+      className={`${baseClasses} ${variantClasses} ${emphasisClasses}`}
       onClick={onClick}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -75,24 +115,35 @@ function MiniEventCard({
     >
       <div className="flex flex-col gap-0.5">
         <h4
-          className={`font-semibold text-slate-50 leading-tight ${isPrimary ? "text-xs" : "text-[10px]"}`}
+          className={`font-semibold text-slate-50 leading-tight ${
+            variant === "focus" ? "text-sm" : variant === "neighbor" ? "text-[11px]" : "text-[10px]"
+          }`}
         >
           {event.title}
         </h4>
-        <p className="text-[9px] text-slate-400 truncate">{event.location}</p>
+        <p
+          className={`truncate text-slate-400 ${
+            variant === "focus" ? "text-xs" : "text-[10px]"
+          }`}
+        >
+          {event.location}
+        </p>
       </div>
       <span
         className={`self-start rounded-full px-2 py-0.5 font-medium text-slate-200 ${
-          isPrimary
-            ? "bg-sky-900/60 text-[9px] ring-1 ring-sky-500/50"
-            : "bg-slate-900/80 text-[8px] ring-1 ring-slate-700/70"
+          variant === "focus"
+            ? "bg-sky-900/60 text-[11px] ring-1 ring-sky-500/60"
+            : "bg-slate-900/80 text-[10px] ring-1 ring-slate-700/70"
         }`}
       >
         {formatYearRange(event.yearStart, event.yearEnd)}
       </span>
+      {variant === "focus" ? (
+        <p className="text-xs text-slate-300 line-clamp-3">{event.description}</p>
+      ) : null}
       {isPrimary && (
-        <div className="flex items-center gap-1 text-[8px] font-medium uppercase tracking-widest text-sky-400">
-          <span className="h-1 w-1 rounded-full bg-sky-400" />
+        <div className="flex items-center gap-1 text-[9px] font-medium uppercase tracking-[0.3em] text-sky-400">
+          <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
           Focus
         </div>
       )}
@@ -121,7 +172,10 @@ function YearColumn({
   isFocus,
   isNeighbor,
   focusYear,
+  isFocusFallback,
+  fallbackSourceYear,
   onSelectEvent,
+  onYearSelect,
 }: YearColumnProps) {
   const isMajorTick =
     ((year % MAJOR_TICK_STEP) + MAJOR_TICK_STEP) % MAJOR_TICK_STEP === 0;
@@ -163,26 +217,32 @@ function YearColumn({
     : isNeighbor
       ? "space-y-1.5"
       : "space-y-1";
+  const cardVariant = isFocus ? "focus" : isNeighbor ? "neighbor" : "distant";
+  const eventsToRender =
+    isFocus || isNeighbor ? eventsForYear : eventsForYear.slice(0, 1);
+  const showFallbackNote =
+    Boolean(isFocus && isFocusFallback && fallbackSourceYear);
 
   // Tick styling
-  const tickHeight = isMajorTick ? "h-10" : "h-6";
-  const tickColor = isActive ? "bg-sky-400" : "bg-slate-600";
+  const tickHeight = isActive ? "h-14" : isMajorTick ? "h-10" : "h-6";
+  const tickColor = isActive ? "bg-sky-400" : isMajorTick ? "bg-slate-500" : "bg-slate-600/80";
 
   return (
     <div
-      className={`flex shrink-0 flex-col items-center gap-2 transition-all duration-300 ${columnWidth} ${columnHeight} ${columnScale}`}
+      className={`relative z-10 flex shrink-0 flex-col items-center gap-2 transition-all duration-300 ${columnWidth} ${columnHeight} ${columnScale}`}
     >
       {/* Cards area */}
       <div
         className={`flex w-full flex-1 flex-col space-y-2 pb-4 ${cardStackTone} ${cardStackSizing}`}
       >
-        {eventsForYear.length > 0 ? (
-          eventsForYear.map((event) => (
+        {eventsToRender.length > 0 ? (
+          eventsToRender.map((event) => (
             <MiniEventCard
               key={event.id}
               event={event}
               isPrimary={isFocus && event.id === primaryEvent?.id}
               onClick={() => onSelectEvent?.(event)}
+              variant={cardVariant}
             />
           ))
         ) : isFocus ? (
@@ -190,13 +250,24 @@ function YearColumn({
             <FocusPlaceholderMini focusYear={focusYear} />
           </div>
         ) : null}
+        {showFallbackNote ? (
+          <p className="text-center text-[10px] text-slate-500">
+            Showing nearest events from {formatYearLabel(fallbackSourceYear!)}
+          </p>
+        ) : null}
       </div>
 
       {/* Tick */}
-      <div className="mt-auto flex flex-col items-center gap-1 pt-2">
+      <button
+        type="button"
+        className="mt-auto flex flex-col items-center gap-1 pt-2 text-slate-500 transition-colors focus:outline-none focus-visible:text-sky-200"
+        aria-label={`Set focus year to ${formatYearLabel(year)}`}
+        aria-pressed={isActive}
+        onClick={() => onYearSelect?.(year)}
+      >
         <span
           className={`w-px ${tickHeight} ${tickColor} transition-all ${
-            isActive ? "shadow-[0_0_6px_rgba(56,189,248,0.7)]" : ""
+            isActive ? "shadow-[0_0_10px_rgba(56,189,248,0.85)]" : ""
           }`}
         />
         {isMajorTick ? (
@@ -208,10 +279,12 @@ function YearColumn({
             {formatYearLabel(year)}
           </span>
         ) : null}
-        {isActive && (
-          <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
+        {isActive ? (
+          <span className="h-2 w-2 rounded-full bg-sky-400 shadow-[0_0_6px_rgba(56,189,248,0.9)]" />
+        ) : (
+          <span className="h-1.5 w-1.5 rounded-full bg-slate-600/40" />
         )}
-      </div>
+      </button>
     </div>
   );
 }
@@ -238,6 +311,13 @@ export function TimelineRail({
   );
   const eventBuckets = useMemo(() => groupEventsByYear(events), [events]);
   const neighborRadius = Math.max(1, Math.round(Math.max(1, eraStep) / 15));
+  const focusColumnMeta = useMemo(
+    () => findNearestEventsForYear(focusYear, years, eventBuckets),
+    [eventBuckets, focusYear, years],
+  );
+  const focusColumnEvents = focusColumnMeta.events;
+  const isFocusUsingFallback =
+    focusColumnMeta.year !== null && focusColumnMeta.year !== focusYear;
 
   // Scroll to center focusYear on mount and when focusYear changes externally
   useEffect(() => {
@@ -368,6 +448,13 @@ export function TimelineRail({
     [maxYear, minYear, onFocusYearChange, onSelectEvent],
   );
 
+  const handleYearSelect = useCallback(
+    (year: number) => {
+      onFocusYearChange(clampYear(year, minYear, maxYear));
+    },
+    [maxYear, minYear, onFocusYearChange],
+  );
+
   return (
     <section
       aria-label="Timeline rail"
@@ -415,21 +502,31 @@ export function TimelineRail({
         onPointerCancel={handlePointerCancel}
         onPointerLeave={handlePointerUp}
       >
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-2 left-1/2 w-px -translate-x-1/2 bg-sky-500/25"
+        />
         {years.map((year) => {
           const eventsForYear = eventBuckets.get(year) ?? [];
           const isFocus = year === focusYear;
           const isNeighbor =
             !isFocus && Math.abs(year - focusYear) <= neighborRadius;
+          const columnEvents = isFocus ? focusColumnEvents : eventsForYear;
 
           return (
             <YearColumn
               key={year}
               year={year}
-              eventsForYear={eventsForYear}
+              eventsForYear={columnEvents}
               isFocus={isFocus}
               isNeighbor={isNeighbor}
               focusYear={focusYear}
               onSelectEvent={handleEventSelect}
+              onYearSelect={handleYearSelect}
+              isFocusFallback={isFocus && isFocusUsingFallback}
+              fallbackSourceYear={
+                isFocus && isFocusUsingFallback ? focusColumnMeta.year : null
+              }
             />
           );
         })}
@@ -437,7 +534,7 @@ export function TimelineRail({
 
       {/* Hint */}
       <p className="text-center text-[10px] text-slate-500">
-        Drag to scroll • Click cards to expand • Arrow keys to nudge
+        Drag to scroll • Click cards or ticks to jump • Arrow keys to nudge
       </p>
     </section>
   );
