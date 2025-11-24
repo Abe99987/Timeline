@@ -1,6 +1,13 @@
 "use client";
 
-import { useMemo, type KeyboardEvent } from "react";
+import {
+  useRef,
+  useMemo,
+  useCallback,
+  useEffect,
+  type KeyboardEvent,
+  type PointerEvent,
+} from "react";
 
 import { clampYear, formatYearLabel } from "@/utils/yearFormatting";
 
@@ -13,6 +20,9 @@ type TimelineBarProps = {
 };
 
 const DEFAULT_MAJOR_STEP = 25;
+const TICK_WIDTH = 32; // w-8 = 2rem = 32px
+const TICK_GAP = 8; // gap-2 = 0.5rem = 8px
+const TICK_TOTAL = TICK_WIDTH + TICK_GAP;
 
 export function TimelineBar({
   focusYear,
@@ -21,6 +31,12 @@ export function TimelineBar({
   maxYear,
   majorTickStep = DEFAULT_MAJOR_STEP,
 }: TimelineBarProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+  const startX = useRef(0);
+  const startScrollLeft = useRef(0);
+  const hasDragged = useRef(false);
+
   const years = useMemo(
     () =>
       Array.from(
@@ -32,10 +48,106 @@ export function TimelineBar({
 
   const normalizedStep = Math.max(1, majorTickStep);
 
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
-      return;
+  // Scroll the focused year into view on mount and when focusYear changes
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || isDragging.current) return;
+
+    const yearIndex = focusYear - minYear;
+    const tickCenter = yearIndex * TICK_TOTAL + TICK_WIDTH / 2;
+    const containerCenter = container.clientWidth / 2;
+    const targetScroll = tickCenter - containerCenter;
+
+    container.scrollTo({
+      left: Math.max(0, targetScroll),
+      behavior: "smooth",
+    });
+  }, [focusYear, minYear]);
+
+  // Snap to the nearest year based on current scroll position
+  const snapToNearestYear = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const containerCenter = container.scrollLeft + container.clientWidth / 2;
+    const nearestIndex = Math.round(
+      (containerCenter - TICK_WIDTH / 2) / TICK_TOTAL,
+    );
+    const clampedIndex = Math.max(0, Math.min(nearestIndex, years.length - 1));
+    const nearestYear = minYear + clampedIndex;
+
+    if (nearestYear !== focusYear) {
+      onFocusYearChange(clampYear(nearestYear, minYear, maxYear));
     }
+  }, [years.length, minYear, maxYear, focusYear, onFocusYearChange]);
+
+  // Pointer event handlers for drag scrolling
+  const handlePointerDown = useCallback((event: PointerEvent<HTMLDivElement>) => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    isDragging.current = true;
+    hasDragged.current = false;
+    startX.current = event.clientX;
+    startScrollLeft.current = container.scrollLeft;
+
+    container.setPointerCapture(event.pointerId);
+    container.style.cursor = "grabbing";
+    container.style.userSelect = "none";
+  }, []);
+
+  const handlePointerMove = useCallback((event: PointerEvent<HTMLDivElement>) => {
+    if (!isDragging.current) return;
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    const deltaX = event.clientX - startX.current;
+    
+    // Mark as dragged if moved more than 5px (to distinguish from clicks)
+    if (Math.abs(deltaX) > 5) {
+      hasDragged.current = true;
+    }
+
+    container.scrollLeft = startScrollLeft.current - deltaX;
+  }, []);
+
+  const handlePointerUp = useCallback(
+    (event: PointerEvent<HTMLDivElement>) => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      container.releasePointerCapture(event.pointerId);
+      container.style.cursor = "";
+      container.style.userSelect = "";
+
+      if (isDragging.current && hasDragged.current) {
+        snapToNearestYear();
+      }
+
+      isDragging.current = false;
+      hasDragged.current = false;
+    },
+    [snapToNearestYear],
+  );
+
+  const handlePointerCancel = useCallback(
+    (event: PointerEvent<HTMLDivElement>) => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      container.releasePointerCapture(event.pointerId);
+      container.style.cursor = "";
+      container.style.userSelect = "";
+      isDragging.current = false;
+      hasDragged.current = false;
+    },
+    [],
+  );
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (isDragging.current) return;
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
 
     event.preventDefault();
     const direction = event.key === "ArrowRight" ? 1 : -1;
@@ -44,6 +156,15 @@ export function TimelineBar({
       onFocusYearChange(nextYear);
     }
   };
+
+  const handleTickClick = useCallback(
+    (year: number) => {
+      // Ignore click if it was a drag gesture
+      if (hasDragged.current) return;
+      onFocusYearChange(clampYear(year, minYear, maxYear));
+    },
+    [minYear, maxYear, onFocusYearChange],
+  );
 
   const isMajorTick = (year: number) =>
     ((year % normalizedStep) + normalizedStep) % normalizedStep === 0;
@@ -73,7 +194,8 @@ export function TimelineBar({
       </header>
 
       <div
-        className="mt-4 flex gap-2 overflow-x-auto pb-3 pt-1"
+        ref={containerRef}
+        className="mt-4 flex cursor-grab gap-2 overflow-x-auto pb-3 pt-1 scrollbar-hide active:cursor-grabbing"
         role="slider"
         tabIndex={0}
         aria-label="Timeline ruler"
@@ -82,6 +204,11 @@ export function TimelineBar({
         aria-valuenow={focusYear}
         aria-valuetext={formatYearLabel(focusYear)}
         onKeyDown={handleKeyDown}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
+        onPointerLeave={handlePointerUp}
       >
         {years.map((year) => {
           const major = isMajorTick(year);
@@ -94,10 +221,8 @@ export function TimelineBar({
             <button
               type="button"
               key={year}
-              onClick={() =>
-                onFocusYearChange(clampYear(year, minYear, maxYear))
-              }
-              className={`flex w-8 flex-col items-center justify-end gap-1 rounded-md pb-0.5 outline-none transition-colors ${
+              onClick={() => handleTickClick(year)}
+              className={`flex w-8 shrink-0 flex-col items-center justify-end gap-1 rounded-md pb-0.5 outline-none transition-colors ${
                 active ? "text-sky-300" : "text-slate-500"
               }`}
               aria-label={`Set focus year to ${formatYearLabel(year)}`}
@@ -123,6 +248,10 @@ export function TimelineBar({
           );
         })}
       </div>
+
+      <p className="mt-2 text-center text-[10px] text-slate-500">
+        Drag to scroll • Click to select • Arrow keys to nudge
+      </p>
     </section>
   );
 }
