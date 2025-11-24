@@ -41,38 +41,23 @@ type YearColumnProps = {
   isFocus: boolean;
   isNeighbor: boolean;
   focusYear: number;
-  isFocusFallback?: boolean;
-  fallbackSourceYear?: number | null;
   onSelectEvent?: (event: TimelineEvent) => void;
   onYearSelect?: (year: number) => void;
 };
 
-function findNearestEventsForYear(
+function getClosestEvents(
   focusYear: number,
-  years: number[],
-  buckets: Map<number, TimelineEvent[]>,
-): { year: number | null; events: TimelineEvent[] } {
-  const exactEvents = buckets.get(focusYear) ?? [];
-  if (exactEvents.length > 0) {
-    return { year: focusYear, events: exactEvents };
-  }
-
-  let closestYear: number | null = null;
-  let closestEvents: TimelineEvent[] = [];
-  let smallestDistance = Number.POSITIVE_INFINITY;
-
-  for (const year of years) {
-    const eventsForYear = buckets.get(year);
-    if (!eventsForYear || eventsForYear.length === 0) continue;
-    const distance = Math.abs(year - focusYear);
-    if (distance < smallestDistance) {
-      smallestDistance = distance;
-      closestYear = year;
-      closestEvents = eventsForYear;
-    }
-  }
-
-  return { year: closestYear, events: closestEvents };
+  events: TimelineEvent[],
+  maxCount: number,
+): TimelineEvent[] {
+  return [...events]
+    .map((event) => ({
+      event,
+      distance: Math.abs(getRepresentativeYear(event) - focusYear),
+    }))
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, Math.max(1, maxCount))
+    .map((entry) => entry.event);
 }
 
 function MiniEventCard({
@@ -172,8 +157,6 @@ function YearColumn({
   isFocus,
   isNeighbor,
   focusYear,
-  isFocusFallback,
-  fallbackSourceYear,
   onSelectEvent,
   onYearSelect,
 }: YearColumnProps) {
@@ -200,28 +183,25 @@ function YearColumn({
   }, [eventsForYear, focusYear]);
 
   // Styling based on focus/neighbor status
-  const columnWidth = "w-28";
-  const columnHeight = "h-[360px]";
+  const columnBaseHeight = isFocus ? "h-[400px]" : "h-[320px]";
+  const columnWidth = isFocus ? "w-32" : "w-24";
   const columnScale = isFocus
-    ? "origin-bottom scale-[1.04]"
+    ? "origin-bottom scale-[1.08]"
     : isNeighbor
-      ? "origin-bottom scale-100 opacity-90"
-      : "origin-bottom scale-[0.96] opacity-70";
+      ? "origin-bottom scale-[0.98] opacity-90"
+      : "origin-bottom scale-[0.92] opacity-60";
   const cardStackSizing = isFocus
-    ? "max-h-[280px] overflow-y-auto pr-2"
+    ? "max-h-[300px] overflow-y-auto pr-2"
     : isNeighbor
-      ? "max-h-[170px] overflow-hidden"
-      : "max-h-[150px] overflow-hidden";
+      ? "max-h-[150px] overflow-hidden"
+      : "max-h-[120px] overflow-hidden";
   const cardStackTone = isFocus
     ? ""
     : isNeighbor
       ? "space-y-1.5"
       : "space-y-1";
   const cardVariant = isFocus ? "focus" : isNeighbor ? "neighbor" : "distant";
-  const eventsToRender =
-    isFocus || isNeighbor ? eventsForYear : eventsForYear.slice(0, 1);
-  const showFallbackNote =
-    Boolean(isFocus && isFocusFallback && fallbackSourceYear);
+  const eventsToRender = eventsForYear;
 
   // Tick styling
   const tickHeight = isActive ? "h-14" : isMajorTick ? "h-10" : "h-6";
@@ -229,7 +209,7 @@ function YearColumn({
 
   return (
     <div
-      className={`relative z-10 flex shrink-0 flex-col items-center gap-2 transition-all duration-300 ${columnWidth} ${columnHeight} ${columnScale}`}
+      className={`relative z-10 flex shrink-0 flex-col items-center gap-2 transition-all duration-300 ${columnWidth} ${columnBaseHeight} ${columnScale}`}
     >
       {/* Cards area */}
       <div
@@ -249,12 +229,13 @@ function YearColumn({
           <div className="flex flex-1 flex-col">
             <FocusPlaceholderMini focusYear={focusYear} />
           </div>
-        ) : null}
-        {showFallbackNote ? (
-          <p className="text-center text-[10px] text-slate-500">
-            Showing nearest events from {formatYearLabel(fallbackSourceYear!)}
-          </p>
-        ) : null}
+        ) : (
+          <div className="flex flex-1 items-end justify-center pb-4 text-[10px] text-slate-600/70">
+            <span className="rounded-full border border-dashed border-slate-700/60 px-2 py-1">
+              No cards
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Tick */}
@@ -311,13 +292,10 @@ export function TimelineRail({
   );
   const eventBuckets = useMemo(() => groupEventsByYear(events), [events]);
   const neighborRadius = Math.max(1, Math.round(Math.max(1, eraStep) / 15));
-  const focusColumnMeta = useMemo(
-    () => findNearestEventsForYear(focusYear, years, eventBuckets),
-    [eventBuckets, focusYear, years],
+  const closestFocusEvents = useMemo(
+    () => getClosestEvents(focusYear, events, 3),
+    [events, focusYear],
   );
-  const focusColumnEvents = focusColumnMeta.events;
-  const isFocusUsingFallback =
-    focusColumnMeta.year !== null && focusColumnMeta.year !== focusYear;
 
   // Scroll to center focusYear on mount and when focusYear changes externally
   useEffect(() => {
@@ -511,7 +489,11 @@ export function TimelineRail({
           const isFocus = year === focusYear;
           const isNeighbor =
             !isFocus && Math.abs(year - focusYear) <= neighborRadius;
-          const columnEvents = isFocus ? focusColumnEvents : eventsForYear;
+          const columnEvents = isFocus
+            ? closestFocusEvents
+            : isNeighbor
+              ? eventsForYear.slice(0, 2)
+              : eventsForYear.slice(0, 1);
 
           return (
             <YearColumn
@@ -523,10 +505,6 @@ export function TimelineRail({
               focusYear={focusYear}
               onSelectEvent={handleEventSelect}
               onYearSelect={handleYearSelect}
-              isFocusFallback={isFocus && isFocusUsingFallback}
-              fallbackSourceYear={
-                isFocus && isFocusUsingFallback ? focusColumnMeta.year : null
-              }
             />
           );
         })}
