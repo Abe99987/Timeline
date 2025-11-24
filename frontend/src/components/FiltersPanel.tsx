@@ -1,3 +1,5 @@
+"use client";
+
 const primaryFilters = ["Wars", "Currency", "Trade", "Religion", "Phenomena"];
 const secondaryFilters = ["People", "Technology", "Institutions"];
 
