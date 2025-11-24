@@ -28,8 +28,8 @@ export function MapPanel({ focusYear }: MapPanelProps) {
       </header>
 
       <div className="relative w-full rounded-[24px] border border-slate-800 bg-slate-900/80">
-        <div className="aspect-[5/3] w-full overflow-hidden rounded-[24px]">
-          <div className="relative flex h-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-sky-900/60 via-slate-900 to-slate-950 px-6 text-center">
+        <div className="aspect-5/3 w-full overflow-hidden rounded-[24px]">
+          <div className="relative flex h-full flex-col items-center justify-center gap-3 bg-linear-to-br from-sky-900/60 via-slate-900 to-slate-950 px-6 text-center">
             <p className="text-sm font-medium text-slate-50">
               Map panel – {formatYearLabel(focusYear)} focus
             </p>
