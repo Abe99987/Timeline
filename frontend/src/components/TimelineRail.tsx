@@ -23,7 +23,7 @@ import {
 
 // Layout constants
 const YEAR_WIDTH = 112; // matches Tailwind w-28 (7rem)
-const NEIGHBOR_RADIUS = 2; // years on each side considered "neighbors"
+const MAJOR_TICK_STEP = 10; // decades
 
 type TimelineRailProps = {
   minYear: number;
@@ -40,7 +40,6 @@ type YearColumnProps = {
   eventsForYear: TimelineEvent[];
   isFocus: boolean;
   isNeighbor: boolean;
-  eraStep: number;
   focusYear: number;
   onSelectEvent?: (event: TimelineEvent) => void;
 };
@@ -121,11 +120,11 @@ function YearColumn({
   eventsForYear,
   isFocus,
   isNeighbor,
-  eraStep,
   focusYear,
   onSelectEvent,
 }: YearColumnProps) {
-  const isMajorTick = ((year % eraStep) + eraStep) % eraStep === 0;
+  const isMajorTick =
+    ((year % MAJOR_TICK_STEP) + MAJOR_TICK_STEP) % MAJOR_TICK_STEP === 0;
   const isActive = year === focusYear;
 
   // Determine which event is "primary" (closest to focusYear)
@@ -146,19 +145,24 @@ function YearColumn({
     return closest;
   }, [eventsForYear, focusYear]);
 
-  const visibleEvents = eventsForYear.slice(0, 2);
-  const extraCount = Math.max(0, eventsForYear.length - visibleEvents.length);
-
   // Styling based on focus/neighbor status
   const columnWidth = "w-28";
+  const columnHeight = "h-[360px]";
   const columnScale = isFocus
-    ? "scale-105"
+    ? "origin-bottom scale-[1.04]"
     : isNeighbor
-      ? "scale-100 opacity-90"
-      : "scale-95 opacity-70";
+      ? "origin-bottom scale-100 opacity-90"
+      : "origin-bottom scale-[0.96] opacity-70";
   const cardStackSizing = isFocus
-    ? "max-h-64 overflow-y-auto"
-    : "max-h-48 overflow-hidden";
+    ? "max-h-[280px] overflow-y-auto pr-2"
+    : isNeighbor
+      ? "max-h-[170px] overflow-hidden"
+      : "max-h-[150px] overflow-hidden";
+  const cardStackTone = isFocus
+    ? ""
+    : isNeighbor
+      ? "space-y-1.5"
+      : "space-y-1";
 
   // Tick styling
   const tickHeight = isMajorTick ? "h-10" : "h-6";
@@ -166,12 +170,14 @@ function YearColumn({
 
   return (
     <div
-      className={`flex shrink-0 flex-col items-center gap-2 transition-all duration-300 ${columnWidth} ${columnScale}`}
+      className={`flex shrink-0 flex-col items-center gap-2 transition-all duration-300 ${columnWidth} ${columnHeight} ${columnScale}`}
     >
       {/* Cards area */}
-      <div className={`w-full space-y-2 pb-2 scrollbar-hide ${cardStackSizing}`}>
-        {visibleEvents.length > 0 ? (
-          visibleEvents.map((event) => (
+      <div
+        className={`flex w-full flex-1 flex-col space-y-2 pb-4 ${cardStackTone} ${cardStackSizing}`}
+      >
+        {eventsForYear.length > 0 ? (
+          eventsForYear.map((event) => (
             <MiniEventCard
               key={event.id}
               event={event}
@@ -180,17 +186,14 @@ function YearColumn({
             />
           ))
         ) : isFocus ? (
-          <FocusPlaceholderMini focusYear={focusYear} />
-        ) : null}
-        {extraCount > 0 ? (
-          <p className="text-center text-[9px] text-slate-500">
-            +{extraCount} more
-          </p>
+          <div className="flex flex-1 flex-col">
+            <FocusPlaceholderMini focusYear={focusYear} />
+          </div>
         ) : null}
       </div>
 
       {/* Tick */}
-      <div className="flex flex-col items-center gap-1 pt-1">
+      <div className="mt-auto flex flex-col items-center gap-1 pt-2">
         <span
           className={`w-px ${tickHeight} ${tickColor} transition-all ${
             isActive ? "shadow-[0_0_6px_rgba(56,189,248,0.7)]" : ""
@@ -234,8 +237,7 @@ export function TimelineRail({
     [minYear, maxYear],
   );
   const eventBuckets = useMemo(() => groupEventsByYear(events), [events]);
-
-  const normalizedStep = Math.max(1, eraStep);
+  const neighborRadius = Math.max(1, Math.round(Math.max(1, eraStep) / 15));
 
   // Scroll to center focusYear on mount and when focusYear changes externally
   useEffect(() => {
@@ -398,7 +400,7 @@ export function TimelineRail({
       {/* Shared scroll container for cards + ticks */}
       <div
         ref={railRef}
-        className="relative flex cursor-grab gap-2 overflow-x-auto px-4 py-4 scrollbar-hide active:cursor-grabbing"
+        className="relative flex min-h-[380px] cursor-grab items-end gap-3 overflow-x-auto px-4 py-4 active:cursor-grabbing"
         role="slider"
         tabIndex={0}
         aria-label="Timeline scrubber"
@@ -417,7 +419,7 @@ export function TimelineRail({
           const eventsForYear = eventBuckets.get(year) ?? [];
           const isFocus = year === focusYear;
           const isNeighbor =
-            !isFocus && Math.abs(year - focusYear) <= NEIGHBOR_RADIUS;
+            !isFocus && Math.abs(year - focusYear) <= neighborRadius;
 
           return (
             <YearColumn
@@ -426,7 +428,6 @@ export function TimelineRail({
               eventsForYear={eventsForYear}
               isFocus={isFocus}
               isNeighbor={isNeighbor}
-              eraStep={normalizedStep}
               focusYear={focusYear}
               onSelectEvent={handleEventSelect}
             />
