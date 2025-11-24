@@ -205,6 +205,7 @@ function YearColumn({
 
   return (
     <div
+      data-year-column={year}
       className={`relative z-10 flex shrink-0 flex-col items-center justify-end transition-all duration-300 ${columnWidth} ${columnHeight} ${columnScale}`}
     >
       {/* Cards area */}
@@ -293,21 +294,43 @@ export function TimelineRail({
     [events, focusYear],
   );
 
+  const scrollYearIntoCenter = useCallback(
+    (targetYear: number) => {
+      const rail = railRef.current;
+      if (!rail) return;
+
+      const columnEl = rail.querySelector<HTMLDivElement>(
+        `[data-year-column="${targetYear}"]`,
+      );
+      const containerWidth = rail.clientWidth;
+      const maxScroll = Math.max(0, rail.scrollWidth - containerWidth);
+
+      let columnCenter: number;
+      if (columnEl) {
+        columnCenter = columnEl.offsetLeft + columnEl.offsetWidth / 2;
+      } else {
+        const fallbackIndex = targetYear - minYear;
+        columnCenter = fallbackIndex * YEAR_WIDTH + YEAR_WIDTH / 2;
+      }
+
+      const targetScroll = Math.min(
+        Math.max(0, columnCenter - containerWidth / 2),
+        maxScroll,
+      );
+
+      rail.scrollTo({
+        left: targetScroll,
+        behavior: "smooth",
+      });
+    },
+    [minYear],
+  );
+
   // Scroll to center focusYear on mount and when focusYear changes externally
   useEffect(() => {
-    const rail = railRef.current;
-    if (!rail || isDragging.current) return;
-
-    const yearIndex = focusYear - minYear;
-    const columnCenter = yearIndex * YEAR_WIDTH + YEAR_WIDTH / 2;
-    const containerCenter = rail.clientWidth / 2;
-    const targetScroll = columnCenter - containerCenter;
-
-    rail.scrollTo({
-      left: Math.max(0, targetScroll),
-      behavior: "smooth",
-    });
-  }, [focusYear, minYear]);
+    if (isDragging.current) return;
+    scrollYearIntoCenter(focusYear);
+  }, [focusYear, scrollYearIntoCenter]);
 
   // Derive focusYear from scroll position
   const deriveFocusYear = useCallback(
@@ -397,6 +420,17 @@ export function TimelineRail({
     [],
   );
 
+  const handleYearSelect = useCallback(
+    (year: number) => {
+      const clampedYear = clampYear(year, minYear, maxYear);
+      onFocusYearChange(clampedYear);
+      if (!isDragging.current) {
+        scrollYearIntoCenter(clampedYear);
+      }
+    },
+    [maxYear, minYear, onFocusYearChange, scrollYearIntoCenter],
+  );
+
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (isDragging.current) return;
     if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
@@ -405,7 +439,7 @@ export function TimelineRail({
     const direction = event.key === "ArrowRight" ? 1 : -1;
     const nextYear = clampYear(focusYear + direction, minYear, maxYear);
     if (nextYear !== focusYear) {
-      onFocusYearChange(nextYear);
+      handleYearSelect(nextYear);
     }
   };
 
@@ -416,17 +450,10 @@ export function TimelineRail({
         minYear,
         maxYear,
       );
-      onFocusYearChange(representativeYear);
+      handleYearSelect(representativeYear);
       onSelectEvent?.(event);
     },
-    [maxYear, minYear, onFocusYearChange, onSelectEvent],
-  );
-
-  const handleYearSelect = useCallback(
-    (year: number) => {
-      onFocusYearChange(clampYear(year, minYear, maxYear));
-    },
-    [maxYear, minYear, onFocusYearChange],
+    [handleYearSelect, maxYear, minYear, onSelectEvent],
   );
 
   return (
