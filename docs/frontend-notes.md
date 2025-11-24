@@ -9,3 +9,4 @@ The root route of the frontend (`/`) now renders a first visual slice of the Sou
 - **`ChatBox`** (`src/components/ChatBox.tsx`): Static chat mock with a few example messages and a disabled input + send button to show the future conversational surface.
 
 
+
