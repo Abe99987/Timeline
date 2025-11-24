@@ -17,6 +17,8 @@ type TimelineBarProps = {
   minYear: number;
   maxYear: number;
   majorTickStep?: number;
+  /** When true, removes the outer section wrapper (for embedding inside a parent card) */
+  embedded?: boolean;
 };
 
 const DEFAULT_MAJOR_STEP = 25;
@@ -30,6 +32,7 @@ export function TimelineBar({
   minYear,
   maxYear,
   majorTickStep = DEFAULT_MAJOR_STEP,
+  embedded = false,
 }: TimelineBarProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
@@ -109,8 +112,21 @@ export function TimelineBar({
       hasDragged.current = true;
     }
 
-    container.scrollLeft = startScrollLeft.current - deltaX;
-  }, []);
+    const newScrollLeft = startScrollLeft.current - deltaX;
+    container.scrollLeft = newScrollLeft;
+
+    // Continuously update focusYear as we drag
+    const containerCenter = newScrollLeft + container.clientWidth / 2;
+    const nearestIndex = Math.round(
+      (containerCenter - TICK_WIDTH / 2) / TICK_TOTAL,
+    );
+    const clampedIndex = Math.max(0, Math.min(nearestIndex, years.length - 1));
+    const provisionalYear = minYear + clampedIndex;
+
+    if (provisionalYear !== focusYear && provisionalYear >= minYear && provisionalYear <= maxYear) {
+      onFocusYearChange(provisionalYear);
+    }
+  }, [years.length, minYear, maxYear, focusYear, onFocusYearChange]);
 
   const handlePointerUp = useCallback(
     (event: PointerEvent<HTMLDivElement>) => {
@@ -169,89 +185,110 @@ export function TimelineBar({
   const isMajorTick = (year: number) =>
     ((year % normalizedStep) + normalizedStep) % normalizedStep === 0;
 
+  const header = (
+    <header className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-500">
+          Dial
+        </p>
+        <h2 className="text-sm font-semibold text-slate-50">
+          Ruler through time
+        </h2>
+      </div>
+      <div className="text-left text-xs sm:text-right">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-slate-500">
+          Focus year
+        </p>
+        <p className="text-base font-semibold text-sky-200">
+          {formatYearLabel(focusYear)}
+        </p>
+      </div>
+    </header>
+  );
+
+  const ruler = (
+    <div
+      ref={containerRef}
+      className="mt-4 flex cursor-grab gap-2 overflow-x-auto pb-3 pt-1 scrollbar-hide active:cursor-grabbing"
+      role="slider"
+      tabIndex={0}
+      aria-label="Timeline ruler"
+      aria-valuemin={minYear}
+      aria-valuemax={maxYear}
+      aria-valuenow={focusYear}
+      aria-valuetext={formatYearLabel(focusYear)}
+      onKeyDown={handleKeyDown}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
+      onPointerLeave={handlePointerUp}
+    >
+      {years.map((year) => {
+        const major = isMajorTick(year);
+        const active = year === focusYear;
+
+        const tickHeight = major ? "h-16" : "h-10";
+        const tickColor = active ? "bg-sky-400" : "bg-slate-600";
+
+        return (
+          <button
+            type="button"
+            key={year}
+            onClick={() => handleTickClick(year)}
+            className={`flex w-8 shrink-0 flex-col items-center justify-end gap-1 rounded-md pb-0.5 outline-none transition-colors ${
+              active ? "text-sky-300" : "text-slate-500"
+            }`}
+            aria-label={`Set focus year to ${formatYearLabel(year)}`}
+          >
+            <span
+              className={`w-px ${tickHeight} ${tickColor} transition-all ${
+                active ? "shadow-[0_0_8px_rgba(56,189,248,0.8)]" : ""
+              }`}
+            />
+            {major ? (
+              <span className="whitespace-nowrap text-[10px] font-medium tracking-wide">
+                {formatYearLabel(year)}
+              </span>
+            ) : (
+              <span className="text-[8px] text-transparent">.</span>
+            )}
+            {active ? (
+              <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
+            ) : (
+              <span className="h-1.5 w-1.5 rounded-full bg-transparent" />
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const hint = (
+    <p className="mt-2 text-center text-[10px] text-slate-500">
+      Drag to scroll • Click to select • Arrow keys to nudge
+    </p>
+  );
+
+  // When embedded, render without the outer section wrapper
+  if (embedded) {
+    return (
+      <div aria-label="Timeline scrubber">
+        {header}
+        {ruler}
+        {hint}
+      </div>
+    );
+  }
+
   return (
     <section
       aria-label="Timeline scrubber"
       className="rounded-3xl border border-slate-800 bg-slate-950/85 p-4 shadow-sm sm:p-5"
     >
-      <header className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-500">
-            Dial
-          </p>
-          <h2 className="text-sm font-semibold text-slate-50">
-            Ruler through time
-          </h2>
-        </div>
-        <div className="text-left text-xs sm:text-right">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-slate-500">
-            Focus year
-          </p>
-          <p className="text-base font-semibold text-sky-200">
-            {formatYearLabel(focusYear)}
-          </p>
-        </div>
-      </header>
-
-      <div
-        ref={containerRef}
-        className="mt-4 flex cursor-grab gap-2 overflow-x-auto pb-3 pt-1 scrollbar-hide active:cursor-grabbing"
-        role="slider"
-        tabIndex={0}
-        aria-label="Timeline ruler"
-        aria-valuemin={minYear}
-        aria-valuemax={maxYear}
-        aria-valuenow={focusYear}
-        aria-valuetext={formatYearLabel(focusYear)}
-        onKeyDown={handleKeyDown}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerCancel}
-        onPointerLeave={handlePointerUp}
-      >
-        {years.map((year) => {
-          const major = isMajorTick(year);
-          const active = year === focusYear;
-
-          const tickHeight = major ? "h-16" : "h-10";
-          const tickColor = active ? "bg-sky-400" : "bg-slate-600";
-
-          return (
-            <button
-              type="button"
-              key={year}
-              onClick={() => handleTickClick(year)}
-              className={`flex w-8 shrink-0 flex-col items-center justify-end gap-1 rounded-md pb-0.5 outline-none transition-colors ${
-                active ? "text-sky-300" : "text-slate-500"
-              }`}
-              aria-label={`Set focus year to ${formatYearLabel(year)}`}
-            >
-              <span
-                className={`w-px ${tickHeight} ${tickColor} transition-all ${
-                  active ? "shadow-[0_0_8px_rgba(56,189,248,0.8)]" : ""
-                }`}
-              />
-              {major ? (
-                <span className="whitespace-nowrap text-[10px] font-medium tracking-wide">
-                  {formatYearLabel(year)}
-                </span>
-              ) : (
-                <span className="text-[8px] text-transparent">.</span>
-              )}
-              {active ? (
-                <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
-              ) : (
-                <span className="h-1.5 w-1.5 rounded-full bg-transparent" />
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      <p className="mt-2 text-center text-[10px] text-slate-500">
-        Drag to scroll • Click to select • Arrow keys to nudge
-      </p>
+      {header}
+      {ruler}
+      {hint}
     </section>
   );
 }

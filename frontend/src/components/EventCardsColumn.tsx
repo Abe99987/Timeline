@@ -10,6 +10,8 @@ import {
 type EventCardsColumnProps = {
   focusYear: number;
   eraStep: number;
+  /** Callback when user clicks "Add event" on a placeholder (stub for future) */
+  onAddEvent?: (year: number) => void;
 };
 
 type EventStack = {
@@ -155,16 +157,63 @@ function EventCard({
   );
 }
 
+function FocusPlaceholder({
+  focusYear,
+  onAddEvent,
+}: {
+  focusYear: number;
+  onAddEvent?: (year: number) => void;
+}) {
+  return (
+    <article className="flex flex-col gap-3 rounded-2xl border border-sky-600/80 bg-slate-950/90 p-5 shadow-lg shadow-sky-900/20 ring-1 ring-sky-500/30 scale-[1.02] transition-all duration-300">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <h3 className="text-base font-semibold text-slate-50">
+            No event recorded
+          </h3>
+          <p className="text-sm text-slate-400">
+            Focus year: {formatYearLabel(focusYear)}
+          </p>
+        </div>
+        <span className="rounded-full bg-sky-900/60 px-3 py-1 text-sm font-medium text-slate-200 ring-2 ring-sky-500/50">
+          {formatYearLabel(focusYear)}
+        </span>
+      </div>
+      <p className="text-sm text-slate-400">
+        No event saved for {formatYearLabel(focusYear)} yet. Every year can have
+        a story — this slot is waiting for one.
+      </p>
+      <button
+        type="button"
+        onClick={() => onAddEvent?.(focusYear)}
+        className="mt-1 flex items-center gap-2 self-start rounded-lg border border-sky-700/60 bg-sky-900/30 px-3 py-1.5 text-xs font-medium text-sky-300 transition-colors hover:bg-sky-900/50 hover:text-sky-200 disabled:cursor-not-allowed disabled:opacity-50"
+        disabled={!onAddEvent}
+      >
+        <span className="text-base leading-none">+</span>
+        Add event
+      </button>
+      <div className="mt-1 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-widest text-sky-400">
+        <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
+        Focus year
+      </div>
+    </article>
+  );
+}
+
 function EventStackColumn({
   stack,
   eraStep,
   isPrimaryStack,
   primaryEventId,
+  focusYear,
+  onAddEvent,
 }: {
   stack: EventStack;
   eraStep: number;
   isPrimaryStack: boolean;
   primaryEventId: string | null;
+  focusYear: number;
+  onAddEvent?: (year: number) => void;
 }) {
   const containerBase =
     "flex flex-1 flex-col rounded-2xl border p-4 shadow-sm transition-all duration-300 sm:p-5";
@@ -197,14 +246,10 @@ function EventStackColumn({
               isPrimary={isPrimaryStack && event.id === primaryEventId}
             />
           ))
+        ) : isPrimaryStack ? (
+          <FocusPlaceholder focusYear={focusYear} onAddEvent={onAddEvent} />
         ) : (
-          <p
-            className={`rounded-xl border border-dashed p-3 text-xs ${
-              isPrimaryStack
-                ? "border-sky-800/50 bg-slate-950/80 text-slate-300"
-                : "border-slate-800/80 bg-slate-950/60 text-slate-400"
-            }`}
-          >
+          <p className="rounded-xl border border-dashed border-slate-800/80 bg-slate-950/60 p-3 text-xs text-slate-400">
             No sample events in this era yet.
           </p>
         )}
@@ -222,6 +267,7 @@ function EventStackColumn({
 export function EventCardsColumn({
   focusYear,
   eraStep,
+  onAddEvent,
 }: EventCardsColumnProps) {
   const normalizedStep = Math.max(1, eraStep);
   const currentAnchor = getEraAnchor(focusYear, normalizedStep);
@@ -253,7 +299,7 @@ export function EventCardsColumn({
   ];
 
   return (
-    <section aria-label="Example historical events" className="space-y-4">
+    <div aria-label="Example historical events" className="space-y-4">
       <header className="space-y-1">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
           Events
@@ -275,9 +321,11 @@ export function EventCardsColumn({
             eraStep={normalizedStep}
             isPrimaryStack={stack.anchor === primaryInfo.anchor}
             primaryEventId={primaryInfo.eventId}
+            focusYear={focusYear}
+            onAddEvent={onAddEvent}
           />
         ))}
       </div>
-    </section>
+    </div>
   );
 }

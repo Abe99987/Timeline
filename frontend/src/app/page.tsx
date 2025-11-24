@@ -58,23 +58,30 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Event cards - three stacks beneath map */}
+        {/* Unified Timeline Rail - Events + Dial as one instrument */}
         <section className="w-full">
           <div className="mx-auto w-full max-w-5xl">
-            <EventCardsColumn focusYear={focusYear} eraStep={ERA_STEP} />
-          </div>
-        </section>
+            <div className="rounded-3xl border border-slate-800 bg-slate-950/85 p-4 shadow-sm sm:p-5">
+              {/* Events area */}
+              <EventCardsColumn
+                focusYear={focusYear}
+                eraStep={ERA_STEP}
+                onAddEvent={(year) => console.log(`[stub] Add event for year: ${year}`)}
+              />
 
-        {/* Timeline ruler - beneath event stacks */}
-        <section className="w-full">
-          <div className="mx-auto w-full max-w-5xl">
-            <TimelineBar
-              focusYear={focusYear}
-              onFocusYearChange={handleFocusYearChange}
-              minYear={MIN_YEAR}
-              maxYear={MAX_YEAR}
-              majorTickStep={ERA_STEP}
-            />
+              {/* Divider */}
+              <div className="my-5 border-t border-slate-800/60" />
+
+              {/* Dial area */}
+              <TimelineBar
+                focusYear={focusYear}
+                onFocusYearChange={handleFocusYearChange}
+                minYear={MIN_YEAR}
+                maxYear={MAX_YEAR}
+                majorTickStep={ERA_STEP}
+                embedded
+              />
+            </div>
           </div>
         </section>
 
