@@ -17,8 +17,6 @@ type TimelineBarProps = {
   minYear: number;
   maxYear: number;
   majorTickStep?: number;
-  /** When true, removes the outer section wrapper (for embedding inside a parent card) */
-  embedded?: boolean;
 };
 
 const DEFAULT_MAJOR_STEP = 25;
@@ -32,7 +30,6 @@ export function TimelineBar({
   minYear,
   maxYear,
   majorTickStep = DEFAULT_MAJOR_STEP,
-  embedded = false,
 }: TimelineBarProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
@@ -269,17 +266,6 @@ export function TimelineBar({
       Drag to scroll • Click to select • Arrow keys to nudge
     </p>
   );
-
-  // When embedded, render without the outer section wrapper
-  if (embedded) {
-    return (
-      <div aria-label="Timeline scrubber">
-        {header}
-        {ruler}
-        {hint}
-      </div>
-    );
-  }
 
   return (
     <section

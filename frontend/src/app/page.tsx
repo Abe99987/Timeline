@@ -3,11 +3,10 @@
 import { useState } from "react";
 
 import { ChatBox } from "@/components/ChatBox";
-import { EventDetailDrawer } from "@/components/EventDetailDrawer";
+import { EventCardsColumn } from "@/components/EventCardsColumn";
 import { FiltersPanel } from "@/components/FiltersPanel";
 import { MapPanel } from "@/components/MapPanel";
-import { TimelineRail } from "@/components/TimelineRail";
-import { sampleEvents, type TimelineEvent } from "@/data/sampleEvents";
+import { TimelineBar } from "@/components/TimelineBar";
 import { clampYear } from "@/utils/yearFormatting";
 
 const MIN_YEAR = -200;
@@ -17,23 +16,10 @@ const INITIAL_FOCUS_YEAR = 120;
 
 export default function Home() {
   const [focusYear, setFocusYear] = useState(INITIAL_FOCUS_YEAR);
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   const handleFocusYearChange = (year: number) => {
     setFocusYear(clampYear(year, MIN_YEAR, MAX_YEAR));
   };
-
-  const handleSelectEvent = (event: TimelineEvent) => {
-    setSelectedEventId(event.id);
-  };
-
-  const handleCloseDrawer = () => {
-    setSelectedEventId(null);
-  };
-
-  const selectedEvent = selectedEventId
-    ? sampleEvents.find((e) => e.id === selectedEventId) ?? null
-    : null;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50">
@@ -72,30 +58,23 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Unified Timeline Rail - Events + Dial as one instrument */}
+        {/* Event cards - three stacks beneath map */}
         <section className="w-full">
           <div className="mx-auto w-full max-w-5xl">
-            <div className="rounded-3xl border border-slate-800 bg-slate-950/85 p-4 shadow-sm sm:p-5">
-              <TimelineRail
-                minYear={MIN_YEAR}
-                maxYear={MAX_YEAR}
-                focusYear={focusYear}
-                onFocusYearChange={handleFocusYearChange}
-                events={sampleEvents}
-                eraStep={ERA_STEP}
-                onSelectEvent={handleSelectEvent}
-              />
-            </div>
+            <EventCardsColumn focusYear={focusYear} eraStep={ERA_STEP} />
+          </div>
+        </section>
 
-            {/* Event Detail Drawer */}
-            {selectedEvent && (
-              <div className="mt-4">
-                <EventDetailDrawer
-                  event={selectedEvent}
-                  onClose={handleCloseDrawer}
-                />
-              </div>
-            )}
+        {/* Timeline ruler - beneath event stacks */}
+        <section className="w-full">
+          <div className="mx-auto w-full max-w-5xl">
+            <TimelineBar
+              focusYear={focusYear}
+              onFocusYearChange={handleFocusYearChange}
+              minYear={MIN_YEAR}
+              maxYear={MAX_YEAR}
+              majorTickStep={ERA_STEP}
+            />
           </div>
         </section>
 
