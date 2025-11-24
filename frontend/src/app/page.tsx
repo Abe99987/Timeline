@@ -1,4 +1,26 @@
+"use client";
+
+import { useState } from "react";
+
+import { ChatBox } from "@/components/ChatBox";
+import { EventCardsColumn } from "@/components/EventCardsColumn";
+import { FiltersPanel } from "@/components/FiltersPanel";
+import { MapPanel } from "@/components/MapPanel";
+import { TimelineBar } from "@/components/TimelineBar";
+import { clampYear } from "@/utils/yearFormatting";
+
+const MIN_YEAR = -200;
+const MAX_YEAR = 200;
+const ERA_STEP = 25;
+const INITIAL_FOCUS_YEAR = 120;
+
 export default function Home() {
+  const [focusYear, setFocusYear] = useState(INITIAL_FOCUS_YEAR);
+
+  const handleFocusYearChange = (year: number) => {
+    setFocusYear(clampYear(year, MIN_YEAR, MAX_YEAR));
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50">
       <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
@@ -22,34 +44,43 @@ export default function Home() {
           </div>
         </header>
 
-        <section className="grid gap-4 lg:grid-cols-[minmax(0,2.5fr)_minmax(260px,1fr)]">
-          <div className="min-w-0">
-            {/* Map panel */}
-            {/* eslint-disable-next-line @typescript-eslint/no-use-before-define */}
-            <MapPanel />
-          </div>
-          <div className="min-w-0 lg:mt-0">
-            {/* Filters panel – stacks below map on mobile */}
-            {/* eslint-disable-next-line @typescript-eslint/no-use-before-define */}
+        {/* Filters tile - full-width at top */}
+        <section className="w-full">
+          <div className="mx-auto w-full max-w-5xl">
             <FiltersPanel />
           </div>
         </section>
 
-        <section className="mt-2 flex flex-col gap-4">
-          <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-            {/* Event cards */}
-            {/* eslint-disable-next-line @typescript-eslint/no-use-before-define */}
-            <EventCardsColumn />
-            {/* Timeline bar */}
-            {/* eslint-disable-next-line @typescript-eslint/no-use-before-define */}
-            <TimelineBar />
+        {/* Map panel - big and centered */}
+        <section className="w-full">
+          <div className="mx-auto w-full max-w-5xl">
+            <MapPanel focusYear={focusYear} />
           </div>
         </section>
 
-        <section className="mt-2">
-          {/* Chat box full-width at the bottom */}
-          <div className="mx-auto w-full max-w-4xl">
-            {/* eslint-disable-next-line @typescript-eslint/no-use-before-define */}
+        {/* Event cards - three stacks beneath map */}
+        <section className="w-full">
+          <div className="mx-auto w-full max-w-5xl">
+            <EventCardsColumn focusYear={focusYear} eraStep={ERA_STEP} />
+          </div>
+        </section>
+
+        {/* Timeline ruler - beneath event stacks */}
+        <section className="w-full">
+          <div className="mx-auto w-full max-w-5xl">
+            <TimelineBar
+              focusYear={focusYear}
+              onFocusYearChange={handleFocusYearChange}
+              minYear={MIN_YEAR}
+              maxYear={MAX_YEAR}
+              majorTickStep={ERA_STEP}
+            />
+          </div>
+        </section>
+
+        {/* Chat box - at bottom */}
+        <section className="w-full">
+          <div className="mx-auto w-full max-w-5xl">
             <ChatBox />
           </div>
         </section>
@@ -57,10 +88,3 @@ export default function Home() {
     </div>
   );
 }
-
-import { MapPanel } from "@/components/MapPanel";
-import { FiltersPanel } from "@/components/FiltersPanel";
-import { EventCardsColumn } from "@/components/EventCardsColumn";
-import { TimelineBar } from "@/components/TimelineBar";
-import { ChatBox } from "@/components/ChatBox";
-

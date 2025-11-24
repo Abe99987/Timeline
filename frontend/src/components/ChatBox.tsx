@@ -1,3 +1,5 @@
+"use client";
+
 type MessageRole = "system" | "historian" | "user";
 
 type Message = {
