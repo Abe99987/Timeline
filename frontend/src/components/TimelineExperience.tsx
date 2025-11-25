@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { EventDetailDrawer } from "@/components/EventDetailDrawer";
 import { MapPanel } from "@/components/MapPanel";
 import { TimelineRail } from "@/components/TimelineRail";
 import { sampleEvents, type TimelineEvent } from "@/data/sampleEvents";
@@ -9,7 +10,6 @@ import {
   buildTimelineTicks,
   type TimelineTick,
 } from "@/utils/timelineBuckets";
-import { formatYearRange } from "@/utils/yearFormatting";
 
 type TimelineExperienceProps = {
   minYear: number;
@@ -68,6 +68,7 @@ export function TimelineExperience({
 
   const [activeTickIndex, setActiveTickIndex] = useState(defaultIndex);
   const [selectedEvent, setSelectedEvent] = useState<TimelineEvent | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Keep the active index in range whenever ticks change.
   useEffect(() => {
@@ -94,9 +95,16 @@ export function TimelineExperience({
 
   const handleEventActivate = useCallback((event: TimelineEvent) => {
     setSelectedEvent(event);
+    setIsDrawerOpen(true);
     if (process.env.NODE_ENV !== "production") {
       console.info("[TimelineExperience] Activated event", event.id);
     }
+  }, []);
+
+  const handleDrawerClose = useCallback(() => {
+    setIsDrawerOpen(false);
+    // Keep the selected event in state for potential re-opening
+    // or clear it if you prefer: setSelectedEvent(null);
   }, []);
 
   return (
@@ -111,37 +119,11 @@ export function TimelineExperience({
         onEventActivate={handleEventActivate}
       />
 
-      <section className="rounded-2xl border border-slate-900/80 bg-slate-950/50 p-4 text-xs text-slate-300">
-        {selectedEvent ? (
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-500">
-                Selected event
-              </p>
-              <p className="text-sm font-semibold text-slate-50">
-                {selectedEvent.title}
-              </p>
-              <p className="text-[11px] text-slate-400">
-                {selectedEvent.location} •{" "}
-                {formatYearRange(selectedEvent.yearStart, selectedEvent.yearEnd)}
-              </p>
-            </div>
-            <p className="text-[11px] text-slate-500">
-              “View details” will open a drawer in the next PR.
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-[11px] text-slate-400">
-              Double-click a card in the active slot to mark it for the upcoming
-              detail drawer.
-            </p>
-            <p className="text-[10px] uppercase tracking-[0.3em] text-slate-600">
-              No event selected
-            </p>
-          </div>
-        )}
-      </section>
+      <EventDetailDrawer
+        event={selectedEvent}
+        isOpen={isDrawerOpen}
+        onClose={handleDrawerClose}
+      />
     </div>
   );
 }
