@@ -507,6 +507,12 @@ export function TimelineRail({
           aria-hidden="true"
           className="pointer-events-none absolute inset-y-2 left-1/2 w-px -translate-x-1/2 bg-sky-500/25"
         />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute bottom-7 left-1/2 flex h-3 w-14 -translate-x-1/2 items-center justify-center rounded-full border border-sky-500/40 bg-sky-500/10 shadow-[0_0_12px_rgba(56,189,248,0.25)]"
+        >
+          <span className="h-0.5 w-8 rounded-full bg-sky-500/40" />
+        </span>
         {years.map((year) => {
           const eventsForYear = eventBuckets.get(year) ?? [];
           const isFocus = year === focusYear;
