@@ -22,13 +22,13 @@ export default function Home() {
               A map-first way to explore how the world changed over time
             </h1>
             <p className="mt-1 max-w-2xl text-xs text-slate-400 sm:text-sm">
-              This is the first visual slice of the interface. Everything you
-              see here is placeholder content wired for layout only.
+              Every dot on this map is a claim: Source S said that Event E happened at 
+              Place P during Time T. We show you the evidence and who handled it along the way.
             </p>
           </div>
           <div className="mt-1 flex gap-2 text-[11px] text-slate-400 sm:mt-0">
             <span className="rounded-full border border-slate-800 bg-slate-950 px-2.5 py-1">
-              MVP layout v0
+              MVP layout v1
             </span>
           </div>
         </header>

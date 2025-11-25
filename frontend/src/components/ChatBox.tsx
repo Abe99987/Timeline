@@ -16,7 +16,7 @@ const demoMessages: Message[] = [
     role: "system",
     name: "Source Timeline",
     time: "Now",
-    text: "This chat will help you ask questions like “What changed along the Silk Road between 0 and 300 CE?”",
+    text: "Ask the map to show you events where sources disagree, or where evidence chains look weak. Try: \"What changed along the Silk Road between 0 and 300 CE?\"",
   },
   {
     id: 2,
@@ -30,7 +30,7 @@ const demoMessages: Message[] = [
     role: "user",
     name: "You",
     time: "Draft",
-    text: "Show me how coinage and religion moved together around 120 CE.",
+    text: "Show me events where multiple sources confirm the same claim around 120 CE.",
   },
 ];
 
@@ -43,11 +43,11 @@ export function ChatBox() {
             Chat
           </p>
           <h2 className="text-sm font-semibold text-slate-50">
-            Ask the map about what was happening
+            Ask about sources, events, and evidence chains
           </h2>
           <p className="text-xs text-slate-400">
-            This is a static mock. In the real product, this will drive
-            exploration and cite sources.
+            This is a static mock. In the real product, this will explore claims 
+            and cite primary sources with their chain of custody.
           </p>
         </div>
       </header>
