@@ -1,4 +1,5 @@
 import type { TimelineEvent } from "@/data/sampleEvents";
+import { formatYearLabel } from "@/utils/yearFormatting";
 
 /**
  * Get the representative year for an event (midpoint of its range)
@@ -63,5 +64,49 @@ export function getBestEventForFocusYear(
   }
 
   return null;
+}
+
+export type TimelineTick = {
+  id: string;
+  year: number;
+  label: string;
+  isMajor: boolean;
+  events: TimelineEvent[];
+};
+
+type BuildTimelineTicksOptions = {
+  minYear: number;
+  maxYear: number;
+  events: TimelineEvent[];
+  majorTickStep?: number;
+};
+
+const DEFAULT_MAJOR_TICK_STEP = 25;
+
+/**
+ * Build an ordered array of timeline ticks that pair year labels with their events.
+ */
+export function buildTimelineTicks({
+  minYear,
+  maxYear,
+  events,
+  majorTickStep = DEFAULT_MAJOR_TICK_STEP,
+}: BuildTimelineTicksOptions): TimelineTick[] {
+  const years = generateYearRange(minYear, maxYear);
+  const buckets = groupEventsByYear(events);
+  const normalizedStep = Math.max(1, majorTickStep);
+
+  return years.map((year) => {
+    const isMajor =
+      ((year % normalizedStep) + normalizedStep) % normalizedStep === 0;
+
+    return {
+      id: `tick-${year}`,
+      year,
+      label: formatYearLabel(year),
+      isMajor,
+      events: buckets.get(year) ?? [],
+    };
+  });
 }
 
