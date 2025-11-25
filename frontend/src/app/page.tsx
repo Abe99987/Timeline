@@ -1,13 +1,8 @@
 "use client";
 
-import { useState } from "react";
-
 import { ChatBox } from "@/components/ChatBox";
 import { FiltersPanel } from "@/components/FiltersPanel";
-import { MapPanel } from "@/components/MapPanel";
-import { TimelineRail } from "@/components/TimelineRail";
-import { sampleEvents } from "@/data/sampleEvents";
-import { clampYear } from "@/utils/yearFormatting";
+import { TimelineExperience } from "@/components/TimelineExperience";
 
 const MIN_YEAR = -200;
 const MAX_YEAR = 200;
@@ -15,12 +10,6 @@ const ERA_STEP = 25;
 const INITIAL_FOCUS_YEAR = 120;
 
 export default function Home() {
-  const [focusYear, setFocusYear] = useState(INITIAL_FOCUS_YEAR);
-
-  const handleFocusYearChange = (year: number) => {
-    setFocusYear(clampYear(year, MIN_YEAR, MAX_YEAR));
-  };
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50">
       <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
@@ -51,23 +40,14 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Map panel - big and centered */}
+        {/* Integrated map + dial experience */}
         <section className="w-full">
           <div className="mx-auto w-full max-w-5xl">
-            <MapPanel focusYear={focusYear} />
-          </div>
-        </section>
-
-        {/* Timeline rail - shared cards + dial */}
-        <section className="w-full">
-          <div className="mx-auto w-full max-w-5xl">
-            <TimelineRail
+            <TimelineExperience
               minYear={MIN_YEAR}
               maxYear={MAX_YEAR}
-              focusYear={focusYear}
-              onFocusYearChange={handleFocusYearChange}
-              events={sampleEvents}
               eraStep={ERA_STEP}
+              initialFocusYear={INITIAL_FOCUS_YEAR}
             />
           </div>
         </section>
