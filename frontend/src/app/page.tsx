@@ -3,10 +3,10 @@
 import { useState } from "react";
 
 import { ChatBox } from "@/components/ChatBox";
-import { EventCardsColumn } from "@/components/EventCardsColumn";
 import { FiltersPanel } from "@/components/FiltersPanel";
 import { MapPanel } from "@/components/MapPanel";
-import { TimelineBar } from "@/components/TimelineBar";
+import { TimelineRail } from "@/components/TimelineRail";
+import { sampleEvents } from "@/data/sampleEvents";
 import { clampYear } from "@/utils/yearFormatting";
 
 const MIN_YEAR = -200;
@@ -58,22 +58,16 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Event cards - three stacks beneath map */}
+        {/* Timeline rail - shared cards + dial */}
         <section className="w-full">
           <div className="mx-auto w-full max-w-5xl">
-            <EventCardsColumn focusYear={focusYear} eraStep={ERA_STEP} />
-          </div>
-        </section>
-
-        {/* Timeline ruler - beneath event stacks */}
-        <section className="w-full">
-          <div className="mx-auto w-full max-w-5xl">
-            <TimelineBar
-              focusYear={focusYear}
-              onFocusYearChange={handleFocusYearChange}
+            <TimelineRail
               minYear={MIN_YEAR}
               maxYear={MAX_YEAR}
-              majorTickStep={ERA_STEP}
+              focusYear={focusYear}
+              onFocusYearChange={handleFocusYearChange}
+              events={sampleEvents}
+              eraStep={ERA_STEP}
             />
           </div>
         </section>
