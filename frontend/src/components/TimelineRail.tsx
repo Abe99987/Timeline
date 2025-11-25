@@ -99,19 +99,21 @@ function EventPreviewCard({
       onClick={(e) => {
         if (!canHighlight) return;
         e.stopPropagation();
+        // For active cards, single click both highlights AND activates
         onHighlight?.();
+        if (variant === "focus" || variant === "active") {
+          onActivate?.();
+        }
       }}
       onKeyDown={(event) => {
         if (!canHighlight) return;
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
           onHighlight?.();
+          if (variant === "focus" || variant === "active") {
+            onActivate?.();
+          }
         }
-      }}
-      onDoubleClick={(e) => {
-        if (!canHighlight) return;
-        e.stopPropagation();
-        onActivate?.();
       }}
     >
       <div className="flex flex-col gap-1">
@@ -142,16 +144,9 @@ function EventPreviewCard({
       ) : null}
 
       {variant === "focus" && canHighlight ? (
-        <button
-          type="button"
-          className="mt-1 self-start text-[11px] font-semibold uppercase tracking-[0.3em] text-sky-300 hover:text-sky-200 transition-colors"
-          onClick={(evt) => {
-            evt.stopPropagation();
-            onActivate?.();
-          }}
-        >
-          View details
-        </button>
+        <span className="mt-1 self-start text-[11px] font-semibold uppercase tracking-[0.3em] text-sky-300">
+          Click to view details
+        </span>
       ) : null}
     </article>
   );
@@ -334,8 +329,10 @@ export function TimelineRail({
 }: TimelineRailProps) {
   const trackRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
+  const hasDraggedBeyondThreshold = useRef(false);
   const startX = useRef(0);
   const startScrollLeft = useRef(0);
+  const DRAG_THRESHOLD = 5; // pixels
 
   const [highlightedEventId, setHighlightedEventId] = useState<string | null>(null);
   const [highlightedEventsByTick, setHighlightedEventsByTick] = useState<
@@ -413,11 +410,10 @@ export function TimelineRail({
     const track = trackRef.current;
     if (!track) return;
     isDragging.current = true;
+    hasDraggedBeyondThreshold.current = false;
     startX.current = event.clientX;
     startScrollLeft.current = track.scrollLeft;
-    track.setPointerCapture(event.pointerId);
-    track.style.cursor = "grabbing";
-    track.style.userSelect = "none";
+    // Don't capture immediately - wait for drag threshold
   }, []);
 
   const handlePointerMove = useCallback(
@@ -428,6 +424,19 @@ export function TimelineRail({
       if (!track) return;
 
       const deltaX = event.clientX - startX.current;
+      
+      // Only start actual dragging if we've moved beyond the threshold
+      if (!hasDraggedBeyondThreshold.current) {
+        if (Math.abs(deltaX) > DRAG_THRESHOLD) {
+          hasDraggedBeyondThreshold.current = true;
+          track.setPointerCapture(event.pointerId);
+          track.style.cursor = "grabbing";
+          track.style.userSelect = "none";
+        } else {
+          return; // Still within click threshold
+        }
+      }
+
       const maxScroll = Math.max(0, track.scrollWidth - track.clientWidth);
       const nextScroll = Math.min(
         Math.max(0, startScrollLeft.current - deltaX),
@@ -450,7 +459,13 @@ export function TimelineRail({
     const track = trackRef.current;
     if (!track) return;
     isDragging.current = false;
-    track.releasePointerCapture(pointerId);
+    hasDraggedBeyondThreshold.current = false;
+    // Only release capture if we actually captured it
+    try {
+      track.releasePointerCapture(pointerId);
+    } catch (e) {
+      // Pointer wasn't captured, that's fine
+    }
     track.style.cursor = "";
     track.style.userSelect = "";
   }, []);
@@ -459,7 +474,10 @@ export function TimelineRail({
     (event: PointerEvent<HTMLDivElement>) => {
       if (!isDragging.current) return;
       releasePointer(event.pointerId);
-      snapToNearestTick();
+      // Only snap if we actually dragged
+      if (hasDraggedBeyondThreshold.current) {
+        snapToNearestTick();
+      }
     },
     [releasePointer, snapToNearestTick],
   );
