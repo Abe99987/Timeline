@@ -343,6 +343,53 @@ export function TimelineRail({
     [years.length, minYear],
   );
 
+  const handleYearSelect = useCallback(
+    (year: number) => {
+      const clampedYear = clampYear(year, minYear, maxYear);
+      onFocusYearChange(clampedYear);
+      if (!isDragging.current) {
+        scrollYearIntoCenter(clampedYear);
+      }
+    },
+    [maxYear, minYear, onFocusYearChange, scrollYearIntoCenter],
+  );
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (isDragging.current) return;
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+
+    event.preventDefault();
+    const direction = event.key === "ArrowRight" ? 1 : -1;
+    const nextYear = clampYear(focusYear + direction, minYear, maxYear);
+    if (nextYear !== focusYear) {
+      handleYearSelect(nextYear);
+    }
+  };
+
+  const handleEventSelect = useCallback(
+    (event: TimelineEvent) => {
+      const representativeYear = clampYear(
+        getRepresentativeYear(event),
+        minYear,
+        maxYear,
+      );
+      handleYearSelect(representativeYear);
+      onSelectEvent?.(event);
+    },
+    [handleYearSelect, maxYear, minYear, onSelectEvent],
+  );
+
+  const getYearAtCenter = useCallback(() => {
+    const rail = railRef.current;
+    if (!rail) return focusYear;
+    return deriveFocusYear(rail.scrollLeft, rail.clientWidth);
+  }, [deriveFocusYear, focusYear]);
+
+  const snapToNearestYear = useCallback(() => {
+    const nearestYear = getYearAtCenter();
+    handleYearSelect(nearestYear);
+  }, [getYearAtCenter, handleYearSelect]);
+
   // Pointer event handlers for drag scrolling
   const handlePointerDown = useCallback(
     (event: PointerEvent<HTMLDivElement>) => {
@@ -402,8 +449,9 @@ export function TimelineRail({
 
       isDragging.current = false;
       hasDragged.current = false;
+      snapToNearestYear();
     },
-    [],
+    [snapToNearestYear],
   );
 
   const handlePointerCancel = useCallback(
@@ -416,44 +464,9 @@ export function TimelineRail({
       rail.style.userSelect = "";
       isDragging.current = false;
       hasDragged.current = false;
+      snapToNearestYear();
     },
-    [],
-  );
-
-  const handleYearSelect = useCallback(
-    (year: number) => {
-      const clampedYear = clampYear(year, minYear, maxYear);
-      onFocusYearChange(clampedYear);
-      if (!isDragging.current) {
-        scrollYearIntoCenter(clampedYear);
-      }
-    },
-    [maxYear, minYear, onFocusYearChange, scrollYearIntoCenter],
-  );
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (isDragging.current) return;
-    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-
-    event.preventDefault();
-    const direction = event.key === "ArrowRight" ? 1 : -1;
-    const nextYear = clampYear(focusYear + direction, minYear, maxYear);
-    if (nextYear !== focusYear) {
-      handleYearSelect(nextYear);
-    }
-  };
-
-  const handleEventSelect = useCallback(
-    (event: TimelineEvent) => {
-      const representativeYear = clampYear(
-        getRepresentativeYear(event),
-        minYear,
-        maxYear,
-      );
-      handleYearSelect(representativeYear);
-      onSelectEvent?.(event);
-    },
-    [handleYearSelect, maxYear, minYear, onSelectEvent],
+    [snapToNearestYear],
   );
 
   return (
